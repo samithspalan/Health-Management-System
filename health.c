@@ -1,127 +1,348 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
-typedef struct {
+// Patient Structure
+typedef struct Patient {
     int patientId;
     char name[50];
     int age;
     char gender[10];
     char medicalHistory[200];
+    char diagnosis[200];
+    char prescribedMedicine[100];
+    int pin; // Security PIN for access
+    struct Patient* next; // Pointer to next patient
 } Patient;
 
-typedef struct {
+// Appointment Structure
+typedef struct Appointment {
     int appointmentId;
     int patientId;
-    char date[11]; // Increased size to accommodate null terminator
-    char time[6];  // Increased size to accommodate null terminator
+    char date[11];
+    char time[6];
     char doctor[50];
+    char status[15]; // Scheduled, Cancelled, Completed
+    struct Appointment* next; // Pointer to next appointment
 } Appointment;
 
-void addPatient(Patient patients[], int *patientCount) {
-    Patient newPatient;
-    newPatient.patientId = *patientCount + 1; // Generate unique patient ID
-    printf("Enter patient name: ");
-    scanf(" %[^\n]", newPatient.name);
-    printf("Enter age: ");
-    scanf("%d", &newPatient.age);
-    printf("Enter gender: ");
-    scanf(" %[^\n]", newPatient.gender);
-    printf("Enter medical history: ");
-    scanf(" %[^\n]", newPatient.medicalHistory);
-
-    patients[*patientCount] = newPatient;
-    (*patientCount)++;
-    printf("Patient added successfully! Patient ID: %d\n", newPatient.patientId);
-}
-
-void printMedicalDetails(Patient patients[], int patientCount) {
+// Emergency Case Structure (Priority Queue Node)
+typedef struct EmergencyCase {
+    int severity; // Higher number indicates higher priority
     int patientId;
-    printf("Enter patient ID to view medical details: ");
-    scanf("%d", &patientId);
+    char issue[100];
+    struct EmergencyCase* next; // Pointer to next emergency case
+} EmergencyCase;
 
-    for (int i = 0; i < patientCount; i++) {
-        if (patients[i].patientId == patientId) {
-            printf("Medical History for %s:\n%s\n", patients[i].name, patients[i].medicalHistory);
-            return;
-        }
+// Doctor Structure
+typedef struct Doctor {
+    char name[50];
+    char specialization[50];
+    struct Doctor* next;
+} Doctor;
+
+// Global Linked Lists
+Patient* patientHead = NULL;        // Head of the patient linked list
+Appointment* appointmentHead = NULL; // Head of the appointment linked list
+EmergencyCase* emergencyHead = NULL; // Head of the emergency priority queue
+Doctor* doctorHead = NULL;          // Head of the doctor linked list
+
+// Function Prototypes
+void addPatient();
+void printPatientRecords();
+void addAppointment();
+void handleAndPrintEmergencies();
+void printPatientReceipt();
+void searchPatientByName();
+void viewDoctors();
+void addDoctor();
+
+// Utility Functions
+Patient* findPatientById(int patientId);
+void enqueueEmergency(int severity, int patientId, const char* issue);
+
+// Function Implementations
+
+void addPatient() {
+    Patient* newPatient = (Patient*)malloc(sizeof(Patient));
+    if (!newPatient) {
+        printf("Memory allocation failed.\n");
+        return;
     }
-    printf("Patient ID %d not found.\n", patientId);
+    static int patientCounter = 0;
+    newPatient->patientId = ++patientCounter;
+    printf("Enter patient name: ");
+    scanf(" %[^\n]", newPatient->name);
+    printf("Enter age: ");
+    scanf("%d", &newPatient->age);
+    printf("Enter gender: ");
+    scanf(" %[^\n]", newPatient->gender);
+    printf("Enter medical history: ");
+    scanf(" %[^\n]", newPatient->medicalHistory);
+    printf("Enter diagnosis: ");
+    scanf(" %[^\n]", newPatient->diagnosis);
+    printf("Enter prescribed medicine: ");
+    scanf(" %[^\n]", newPatient->prescribedMedicine);
+    printf("Set a security PIN for access: ");
+    scanf("%d", &newPatient->pin);
+
+    newPatient->next = patientHead;
+    patientHead = newPatient;
+
+    printf("Patient added successfully! Patient ID: %d\n", newPatient->patientId);
 }
 
-void addAppointment(Appointment appointments[], int *appointmentCount, int patientId) {
-    Appointment newAppointment;
-    newAppointment.appointmentId = *appointmentCount + 1;
-    newAppointment.patientId = patientId;
-    printf("Enter appointment date (dd/mm/yyyy): ");
-    scanf(" %[^\n]", newAppointment.date);
-    printf("Enter appointment time (hh:mm): ");
-    scanf(" %[^\n]", newAppointment.time);
-    printf("Enter doctor's name: ");
-    scanf(" %[^\n]", newAppointment.doctor);
+void printPatientRecords() {
+    Patient* temp = patientHead;
+    if (!temp) {
+        printf("No patient records found.\n");
+        return;
+    }
+    printf("Patient Records:\n");
+    while (temp) {
+        printf("ID: %d | Name: %s | Age: %d | Gender: %s\n", temp->patientId, temp->name, temp->age, temp->gender);
+        temp = temp->next;
+    }
+}
 
-    appointments[*appointmentCount] = newAppointment;
-    (*appointmentCount)++;
+void addAppointment() {
+    Appointment* newAppointment = (Appointment*)malloc(sizeof(Appointment));
+    if (!newAppointment) {
+        printf("Memory allocation failed.\n");
+        return;
+    }
+    static int appointmentCounter = 0;
+    newAppointment->appointmentId = ++appointmentCounter;
+
+    printf("Enter patient ID: ");
+    scanf("%d", &newAppointment->patientId);
+
+    Patient* patient = findPatientById(newAppointment->patientId);
+    if (!patient) {
+        printf("Patient ID not found.\n");
+        free(newAppointment);
+        return;
+    }
+
+    printf("Enter appointment date (dd/mm/yyyy): ");
+    scanf(" %[^\n]", newAppointment->date);
+    printf("Enter appointment time (hh:mm): ");
+    scanf(" %[^\n]", newAppointment->time);
+    printf("Enter doctor's name: ");
+    scanf(" %[^\n]", newAppointment->doctor);
+    strcpy(newAppointment->status, "Scheduled");
+
+    newAppointment->next = appointmentHead;
+    appointmentHead = newAppointment;
+
     printf("Appointment added successfully!\n");
 }
 
-void checkNotifications(Appointment appointments[], int appointmentCount) {
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    char currentDate[11];
-    sprintf(currentDate, "%02d/%02d/%04d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+void handleAndPrintEmergencies() {
+    int choice;
+    printf("\n--- Emergency Management ---\n");
+    printf("1. Add Emergency Case\n");
+    printf("2. View Emergency Cases\n");
+    printf("Enter your choice: ");
+    scanf("%d", &choice);
 
-    int found = 0;
-    for (int i = 0; i < appointmentCount; i++) {
-        if (strcmp(appointments[i].date, currentDate) == 0) {
-            printf("Reminder: Appointment for patient ID %d with Dr. %s at %s today.\n",
-                   appointments[i].patientId, appointments[i].doctor, appointments[i].time);
-            found = 1;
+    if (choice == 1) {
+        int severity, patientId;
+        char issue[100];
+        printf("Enter patient ID: ");
+        scanf("%d", &patientId);
+
+        Patient* patient = findPatientById(patientId);
+        if (!patient) {
+            printf("Patient ID not found.\n");
+            return;
         }
-    }
-    if (!found) {
-        printf("No appointments for today.\n");
+
+        printf("Enter emergency severity (1-10): ");
+        scanf("%d", &severity);
+        printf("Enter emergency issue: ");
+        scanf(" %[^\n]", issue);
+
+        enqueueEmergency(severity, patientId, issue);
+        printf("Emergency case added to queue.\n");
+    } else if (choice == 2) {
+        EmergencyCase* temp = emergencyHead;
+        if (!temp) {
+            printf("No emergency cases.\n");
+            return;
+        }
+        printf("Emergency Cases:\n");
+        while (temp) {
+            printf("Severity: %d | Patient ID: %d | Issue: %s\n", temp->severity, temp->patientId, temp->issue);
+            temp = temp->next;
+        }
+    } else {
+        printf("Invalid choice. Returning to main menu.\n");
     }
 }
 
+void enqueueEmergency(int severity, int patientId, const char* issue) {
+    EmergencyCase* newCase = (EmergencyCase*)malloc(sizeof(EmergencyCase));
+    if (!newCase) {
+        printf("Memory allocation failed.\n");
+        return;
+    }
+    newCase->severity = severity;
+    newCase->patientId = patientId;
+    strcpy(newCase->issue, issue);
+    newCase->next = NULL;
+
+    if (!emergencyHead || emergencyHead->severity < severity) {
+        newCase->next = emergencyHead;
+        emergencyHead = newCase;
+        return;
+    }
+
+    EmergencyCase* temp = emergencyHead;
+    while (temp->next && temp->next->severity >= severity) {
+        temp = temp->next;
+    }
+    newCase->next = temp->next;
+    temp->next = newCase;
+}
+void printPatientReceipt() {
+    int patientId, pin;
+    printf("Enter patient ID: ");
+    scanf("%d", &patientId);
+
+    Patient* patient = findPatientById(patientId);
+    if (!patient) {
+        printf("Patient ID not found.\n");
+        return;
+    }
+
+    printf("Enter PIN to access records: ");
+    scanf("%d", &pin);
+
+    if (patient->pin != pin) {
+        printf("Invalid PIN. Access denied.\n");
+        return;
+    }
+
+    printf("\n--- Patient Receipt ---\n");
+    printf("Patient ID: %d\n", patient->patientId);
+    printf("Name: %s\n", patient->name);
+    printf("Age: %d\n", patient->age);
+    printf("Diagnosis: %s\n", patient->diagnosis);
+    printf("Prescribed Medicine: %s\n", patient->prescribedMedicine);
+    printf("Medical History: %s\n", patient->medicalHistory);
+    printf("-----------------------\n");
+}
+
+void addDoctor() {
+    Doctor* newDoctor = (Doctor*)malloc(sizeof(Doctor));
+    if (!newDoctor) {
+        printf("Memory allocation failed.\n");
+        return;
+    }
+
+    printf("Enter doctor's name: ");
+    scanf(" %[^\n]", newDoctor->name);
+    printf("Enter specialization: ");
+    scanf(" %[^\n]", newDoctor->specialization);
+
+    newDoctor->next = doctorHead;
+    doctorHead = newDoctor;
+
+    printf("Doctor added successfully!\n");
+}
+
+void viewDoctors() {
+    Doctor* temp = doctorHead;
+    if (!temp) {
+        printf("No doctors available.\n");
+        return;
+    }
+    printf("Available Doctors:\n");
+    while (temp) {
+        printf("Name: %s | Specialization: %s\n", temp->name, temp->specialization);
+        temp = temp->next;
+    }
+}
+
+void searchPatientByName() {
+    char name[50];
+    printf("Enter patient name: ");
+    scanf(" %[^\n]", name);
+
+    Patient* temp = patientHead;
+    int found = 0;
+
+    while (temp) {
+        if (strcasecmp(temp->name, name) == 0) {
+            printf("Patient ID: %d | Name: %s | Age: %d | Gender: %s\n",
+                   temp->patientId, temp->name, temp->age, temp->gender);
+            found = 1;
+        }
+        temp = temp->next;
+    }
+    if (!found)
+        printf("No patient found with the name '%s'.\n", name);
+}
+
+Patient* findPatientById(int patientId) {
+    Patient* temp = patientHead;
+    while (temp) {
+        if (temp->patientId == patientId)
+            return temp;
+        temp = temp->next;
+    }
+    return NULL;
+}
+
 int main() {
-    Patient patients[100];
-    Appointment appointments[100];
-    int patientCount = 0;
-    int appointmentCount = 0;
-    int choice, patientId;
+    int choice;
 
     while (1) {
-        printf("\nHealth Management System\n");
+        printf("\n--- Health Management System ---\n");
         printf("1. Add Patient\n");
-        printf("2. Print Medical Details\n");
+        printf("2. Print Patient Records\n");
         printf("3. Add Appointment\n");
-        printf("4. Check Notifications\n");
-        printf("5. Exit\n");
+        printf("4. Emergency Management\n");
+        printf("5. Print Patient Receipt\n");
+        printf("6. Search Patient by Name\n");
+        printf("7. Add Doctor\n");
+        printf("8. View Doctors\n");
+        printf("9. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
 
         switch (choice) {
             case 1:
-                addPatient(patients, &patientCount);
+                addPatient();
                 break;
             case 2:
-                printMedicalDetails(patients, patientCount);
-                break;  
+                printPatientRecords();
+                break;
             case 3:
-                printf("Enter patient ID for appointment: ");
-                scanf("%d", &patientId);
-                addAppointment(appointments, &appointmentCount, patientId);
+                addAppointment();
                 break;
             case 4:
-                checkNotifications(appointments, appointmentCount);
+                handleAndPrintEmergencies();
                 break;
             case 5:
+                printPatientReceipt();
+                break;
+            case 6:
+                searchPatientByName();
+                break;
+            case 7:
+                addDoctor();
+                break;
+            case 8:
+                viewDoctors();
+                break;
+            case 9:
+                printf("Exiting...\n");
                 return 0;
             default:
                 printf("Invalid choice. Please try again.\n");
         }
     }
-
     return 0;
 }
