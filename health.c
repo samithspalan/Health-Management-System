@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Patient Structure
+
 typedef struct Patient {
     int patientId;
     char name[50];
@@ -11,43 +11,43 @@ typedef struct Patient {
     char medicalHistory[200];
     char diagnosis[200];
     char prescribedMedicine[100];
-    int pin; // Security PIN for access
-    struct Patient* next; // Pointer to next patient
+    int pin; 
+    struct Patient* next; 
 } Patient;
 
-// Appointment Structure
+
 typedef struct Appointment {
     int appointmentId;
     int patientId;
     char date[11];
     char time[6];
     char doctor[50];
-    char status[15]; // Scheduled, Cancelled, Completed
-    struct Appointment* next; // Pointer to next appointment
+    char status[15]; 
+    struct Appointment* next; 
 } Appointment;
 
-// Emergency Case Structure (Priority Queue Node)
+
 typedef struct EmergencyCase {
-    int severity; // Higher number indicates higher priority
+    int severity; 
     int patientId;
     char issue[100];
-    struct EmergencyCase* next; // Pointer to next emergency case
+    struct EmergencyCase* next; 
 } EmergencyCase;
 
-// Doctor Structure
+
 typedef struct Doctor {
     char name[50];
     char specialization[50];
     struct Doctor* next;
 } Doctor;
 
-// Global Linked Lists
-Patient* patientHead = NULL;        // Head of the patient linked list
-Appointment* appointmentHead = NULL; // Head of the appointment linked list
-EmergencyCase* emergencyHead = NULL; // Head of the emergency priority queue
-Doctor* doctorHead = NULL;          // Head of the doctor linked list
 
-// Function Prototypes
+Patient* patientHead = NULL;       
+Appointment* appointmentHead = NULL; 
+EmergencyCase* emergencyHead = NULL;
+Doctor* doctorHead = NULL;          
+
+
 void addPatient();
 void printPatientRecords();
 void addAppointment();
@@ -57,11 +57,10 @@ void searchPatientByName();
 void viewDoctors();
 void addDoctor();
 
-// Utility Functions
+
 Patient* findPatientById(int patientId);
 void enqueueEmergency(int severity, int patientId, const char* issue);
 
-// Function Implementations
 
 void addPatient() {
     Patient* newPatient = (Patient*)malloc(sizeof(Patient));
