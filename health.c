@@ -94,10 +94,10 @@ void addPatient() {
 void printPatientRecords() {
     Patient* temp = patientHead;
     if (!temp) {
-        printf("No patient records found.\n");
+        printf("No patient receipt found.\n");
         return;
     }
-    printf("Patient Records:\n");
+    printf("Patient Receipt:\n");
     while (temp) {
         printf("ID: %d | Name: %s | Age: %d | Gender: %s\n", temp->patientId, temp->name, temp->age, temp->gender);
         temp = temp->next;
@@ -223,7 +223,7 @@ void printPatientReceipt() {
         return;
     }
 
-    printf("\n--- Patient Receipt ---\n");
+    printf("\n--- Patient Record ---\n");
     printf("Patient ID: %d\n", patient->patientId);
     printf("Name: %s\n", patient->name);
     printf("Age: %d\n", patient->age);
@@ -300,10 +300,10 @@ int main() {
     while (1) {
         printf("\n--- Health Management System ---\n");
         printf("1. Add Patient\n");
-        printf("2. Print Patient Records\n");
+        printf("2. Print Patient Receipt\n");
         printf("3. Add Appointment\n");
         printf("4. Emergency Management\n");
-        printf("5. Print Patient Receipt\n");
+        printf("5. Print Patient Record\n");
         printf("6. Search Patient by Name\n");
         printf("7. Add Doctor\n");
         printf("8. View Doctors\n");
